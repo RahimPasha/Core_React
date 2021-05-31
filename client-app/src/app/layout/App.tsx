@@ -8,10 +8,11 @@ import agent from '../API/agent';
 import LoadingComponent from './LoadingComponent';
 
 function App() {
-  const [activities, setActivies] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>(undefined);
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   
 
   useEffect(()=> {
@@ -22,7 +23,7 @@ function App() {
         activity.date = activity.date.split('T')[0];
         activities.push(activity);
       })
-      setActivies(activities);
+      setActivities(activities);
       setLoading(false);
     })
   }, [])
@@ -40,19 +41,34 @@ function App() {
   }
 
   function handleFormClose(){
-    setEditMode(false);
+    setEditMode(false); 
   }
 
   function handleCreateOrEditActivity(activity: Activity){
-    activity.id ? setActivies([...activities.filter(x=> x.id !== activity.id),activity])
-    : setActivies([...activities, {...activity, id:uuid()}]);
+    setSubmitting(true);
+    if(activity.id){
+      agent.Activities.update(activity).then(()=>{
+        setActivities([...activities.filter(x=> x.id !== activity.id),activity])
+        setSelectedActivity(activity);
+        setEditMode(false);
+        setSubmitting(false);
+      })
 
-    setEditMode(false);
-    setSelectedActivity(activity);
+    }
+    else{
+      activity.id = uuid();
+      agent.Activities.create(activity).then(()=>{
+        setActivities([...activities, activity])
+        setSelectedActivity(activity);
+        setEditMode(false);
+        setSubmitting(false);
+      })
+      
+    }
   }
 
   function handleDeleteActivity(id: string){
-    setActivies([...activities.filter(x=>x.id != id)]);
+    setActivities([...activities.filter(x=>x.id != id)]);
   }
 
   if(loading) return <LoadingComponent content='Loaiding app'/>
@@ -71,6 +87,7 @@ function App() {
       closeForm={handleFormClose}
       createOrEdit={handleCreateOrEditActivity}
       deleteActivity={handleDeleteActivity}
+      submitting={submitting}
       />
       </Container>
 
